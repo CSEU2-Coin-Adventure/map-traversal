@@ -35,6 +35,12 @@ class Stack:
     def length(self):
         return len(self.stack)
 
+def GetVisited():
+    with open("visited.json", "r") as f:
+        return json.loads(f.read())
+
+visited_loaded = GetVisited()
+
 def traverse_map():
     # create path array
     path = []
@@ -52,7 +58,7 @@ def traverse_map():
     # create direction_stack
     direction_stack = Stack()
     # create visited dict
-    visited = {}
+    visited = visited_loaded or {}
     # save previous room
     previous_room = None
     # push the first room onto the stack
@@ -77,7 +83,7 @@ def traverse_map():
                     # store response in dict (for now) with room_id as key and all info as value
                     visited[room.get('room_id')] = room_exits
                     # save visited to json
-                    with open('visited.txt', 'w') as outfile:
+                    with open('visited.json', 'w') as outfile:
                         json.dump(visited, outfile)
                 # add direction to path array and opposite to hansel stack also add room number that goes with that direction to stack
                 if direction_from != None and previous_room != None:
@@ -87,8 +93,8 @@ def traverse_map():
                     # set direction to previous room number for current room
                     visited[room.get('room_id')][opposites[direction_from]] = previous_room
                     visited[previous_room][direction_from] = room.get('room_id')
-                    # save visited to filr
-                    with open('visited.txt', 'w') as outfile:
+                    # save visited to file
+                    with open('visited.json', 'w') as outfile:
                         json.dump(visited, outfile)
                 # loop through exits array on item
                 for (d, i) in visited[room.get('room_id')].items():
@@ -97,9 +103,21 @@ def traverse_map():
                         # call the api with each of the directions
                         new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json = { 'direction': d }, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' }).json()
                         print(new_room)
+                        
+                        time.sleep(new_room.get('cooldown'))
+
+                        if 'tiny treasure' in new_room.get('items'):
+                            treasure = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/take/", json = { 'name': 'treasure' }, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' }).json()
+                            print(treasure)
+                            time.sleep(20)
+
+                        print(new_room.get('errors'))
+                        if len(new_room.get('errors')):
+                            time.sleep(20)
+
                         result = posts.insert_one(new_room)
                         print('One post: {0}'.format(result.inserted_id))
-                        time.sleep(new_room.get('cooldown'))
+                        
                         # add room to stack
                         stack.push(new_room)
                         direction_stack.push(d)
@@ -115,8 +133,8 @@ def traverse_map():
             # go in direction of hansel_stack
             new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json = { 'direction': d }, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
             print(new_room)
-            result = posts.insert_one(new_room)
-            print('One post: {0}'.format(result.inserted_id))
+            if len(new_room.get('errors')):
+                time.sleep(20)
             time.sleep(new_room.get('cooldown'))
             # add direction to path
             path.append(d)
