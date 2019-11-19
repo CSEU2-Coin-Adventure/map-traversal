@@ -28,7 +28,7 @@ class Traverse:
         self.stack = None
         self.hansel_stack = None
         self.direction_stack = None
-        self.visited = visited or {}
+        self.visited = {}
         self.rooms = {}
         self.previous_room = None
 
@@ -93,7 +93,7 @@ class Traverse:
         # save visited to json
         self.save_file(self.visited, "visited.json")
 
-    def append_room(self, direction_from):
+    def append_room(self, room, direction_from):
         # add item to visited array with exists as value room number as key
         self.path.append(direction_from)
         self.save_file(self.path, "path.txt")
@@ -112,7 +112,7 @@ class Traverse:
             # if unexplored add to stack
             if i == '?':
                 # call the api with each of the directions
-                new_room = move(d)
+                new_room = self.move(d)
                 print(new_room)
 
                 time.sleep(new_room.get('cooldown'))
@@ -149,7 +149,7 @@ class Traverse:
                 self.save_new_room(room)
             # add direction to path array and opposite to hansel stack also add room number that goes with that direction to stack
             if direction_from != None and self.previous_room != None:
-                self.append_room(direction_from)
+                self.append_room(room, direction_from)
 
             self.check_exits(room)
 
