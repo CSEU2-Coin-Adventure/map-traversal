@@ -5,6 +5,7 @@ import json
 
 from pymongo import MongoClient
 
+
 class Stack:
     def __init__(self):
         self.stack = []
@@ -29,7 +30,6 @@ class Traverse:
         self.hansel_stack = None
         self.direction_stack = None
         self.visited = {}
-        self.rooms = {}
         self.previous_room = None
 
         self.post = None
@@ -57,7 +57,8 @@ class Traverse:
 
     def get_visited(self):
         with open("visited.json", "r") as f:
-            self.visited = json.loads(f.read())
+            visited_json = json.loads(f.read())
+            self.visited = {int(key):value for (key,value) in visited_json.items()}
 
     def init_current_room(self):
         room = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/adv/init/", headers={
@@ -102,33 +103,46 @@ class Traverse:
         # set direction to previous room number for current room
         self.visited[room.get(
             'room_id')][self.opposites[direction_from]] = self.previous_room
-        self.visited[previous_room][direction_from] = room.get(
+        self.visited[self.previous_room][direction_from] = room.get(
             'room_id')
         self.save_file(self.visited, "visited.json")
 
+    def take_exit(self, direction):
+        new_room = self.move(direction)
+        print(new_room)
+
+        time.sleep(new_room.get('cooldown'))
+
+        # if 'tiny treasure' in new_room.get('items'):
+        #     self.get_treasure()
+
+        print(new_room.get('errors'))
+        if len(new_room.get('errors')):
+            time.sleep(20)
+
+        self.save_to_db(new_room)
+
+        # add room to stack
+        self.stack.push(new_room)
+        self.direction_stack.push(direction)
+        
     def check_exits(self, room):
+        if '?' in self.visited[room.get('room_id')].values():
             # loop through exits array on item
-        for (d, i) in self.visited[room.get('room_id')].items():
-            # if unexplored add to stack
-            if i == '?':
-                # call the api with each of the directions
-                new_room = self.move(d)
-                print(new_room)
+            for (d, i) in self.visited[room.get('room_id')].items():
+                print(room.get('room_id'))
+                print(self.visited[room.get('room_id')])
+                # if unexplored add to stack
+                if i == '?':
+                    self.take_exit(d)
+                    break
 
-                time.sleep(new_room.get('cooldown'))
-
-                if 'tiny treasure' in new_room.get('items'):
-                    self.get_treasure()
-
-                print(new_room.get('errors'))
-                if len(new_room.get('errors')):
-                    time.sleep(20)
-
-                self.save_to_db(new_room)
-
-                # add room to stack
-                self.stack.push(new_room)
-                self.direction_stack.push(d)
+        else:
+            for (d, i) in self.visited[room.get('room_id')].items():
+                print(room.get('room_id'))
+                print(self.visited[room.get('room_id')])
+                # if unexplored add to stack
+                self.take_exit(d)
                 break
 
     def save_file(self, item, filename):
@@ -139,7 +153,6 @@ class Traverse:
     def explore(self):
         # pop the stack and set to room
         room = self.stack.pop()
-        self.rooms[room.get('room_id')] = room
         # pop direction stack
         direction_from = self.direction_stack.pop()
         # if the room has not been visited before or
@@ -174,6 +187,7 @@ class Traverse:
 
     def run(self):
         while self.stack.length() or self.hansel_stack.length():
+            print(self.stack)
             if self.stack.length():
                 self.explore()
             else:
@@ -181,6 +195,13 @@ class Traverse:
 
         return self.visited
 
+
 traverser = Traverse()
 traverser.init()
 traverser.run()
+
+
+# curl -X POST -H 'Authorization: Token 91eab72c1255c3828263a3a60a6cefc409f6461c' -H "Content-Type: application/json" -d '{"name":"treasure"}' https://lambda-treasure-hunt.herokuapp.com/api/adv/drop/
+
+# curl -X POST -H 'Authorization: Token 91eab72c1255c3828263a3a60a6cefc409f6461c' -H "Content-Type: application/json" https://lambda-treasure-hunt.herokuapp.com/api/adv/status/
+
