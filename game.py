@@ -136,8 +136,6 @@ class Mover:
             treasure = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/take/", json={
                                      'name': 'treasure'}, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
             print(colored("You've picked up some treasure", "blue"))
-            print("You now have: ", colored(
-                len(treasure.get('items')), "blue"), "items of treasure")
             print("-------------------------")
             time.sleep(20)
 
