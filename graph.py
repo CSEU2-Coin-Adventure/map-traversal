@@ -136,6 +136,15 @@ class Mover:
         print("Path", colored(self.path, "blue"))
         self.go()
 
+    def go_to_location(self, value):
+        (directions, path) = self.graph.dft(
+            self.current_room.get('room_id'), value)
+        self.directions = directions
+        self.path = [str(num) for num in path]
+        print("Directions: ", colored(self.directions, "blue"))
+        print("Path", colored(self.path, "blue"))
+        self.go()
+
     def pray(self):
         if self.current_room.get("room_id") == 461:
            result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/pray/", headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
@@ -150,6 +159,7 @@ def print_instructions():
     print("     -", colored("shop", "green"), " - this will take you to the shop from your current location")
     print("     -", colored("shrine", "green"), " - this will take you to the shrine from your current location")
     print("     -", colored("pray", "green"), "- if you are at the shrine you will play")
+    print("     -", colored("location <room number>", "green"), "- this will take you to a room of your choice")
 
 
 def start(inputs):
@@ -185,7 +195,7 @@ def start(inputs):
         else:
             print("enter y or n")
     elif inputs[1] == "pray":
-        text = input("Are you sure you want to go to pray? [y or n]\n")
+        text = input("Are you sure you want to to pray? [y or n]\n")
         if text == "y":
             print("Time to pray")
             m.pray()
@@ -193,6 +203,18 @@ def start(inputs):
             print("Ok")
         else:
             print("enter y or n")
+    elif inputs[1] == "location" or inputs[1] == "loco":
+        if len(inputs) > 2:
+            text = input(f"Are you sure you want to go to {inputs[2]}? [y or n]\n")
+            if text == "y":
+                print("Time to pray")
+                m.go_to_location(inputs[2])
+            elif text == "n":
+                print("Ok")
+            else:
+                print("enter y or n")
+        else: 
+            print(colored("You need to enter a room number", "red"))
     else:
         print_instructions()
 
