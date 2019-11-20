@@ -5,7 +5,6 @@ import json
 
 from pymongo import MongoClient
 
-
 class Stack:
     def __init__(self):
         self.stack = []
@@ -46,7 +45,7 @@ class Traverse:
         self.stack = Stack()
         self.hansel_stack = Stack()
         self.direction_stack = Stack()
-        self.get_visited()
+        # self.get_visited()
         self.init_current_room()
 
     def init_db(self):
@@ -136,14 +135,6 @@ class Traverse:
                 if i == '?':
                     self.take_exit(d)
                     break
-
-        else:
-            for (d, i) in self.visited[room.get('room_id')].items():
-                print(room.get('room_id'))
-                print(self.visited[room.get('room_id')])
-                # if unexplored add to stack
-                self.take_exit(d)
-                break
 
     def save_file(self, item, filename):
         # save visited to file
