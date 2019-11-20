@@ -3,6 +3,7 @@ import time
 import requests
 import csv
 import sys
+import random
 from termcolor import colored
 
 
@@ -27,9 +28,11 @@ class Graph:
     def __init__(self):
         self.current_node = None
         self.nodes = {}
+        self.rooms = {}
 
     def init(self):
         self.get_nodes()
+        self.get_rooms()
 
     def get_nodes(self):
         with open("visited.json", "r") as f:
@@ -37,9 +40,43 @@ class Graph:
             self.nodes = {int(key): value for (key, value)
                           in visited_json.items()}
 
+    def get_rooms(self):
+        with open("rooms.json") as f:
+            rooms = json.loads(f.read())
+            rooms_dict = {}
+            for r in rooms:
+                rooms_dict[r.get('room_id')] = r.get('items')
+            self.rooms = rooms_dict
+
     def dft(self, value_1, value_2):
         q = Queue()
         directions_q = Queue()
+        q.enqueue([value_1])
+        directions_q.enqueue([])
+
+        while q.length():
+            path = q.dequeue()
+            directions = directions_q.dequeue()
+            room = path[-1]
+
+            if room == value_2:
+                return (directions, path)
+
+            for (d, n) in self.nodes[room].items():
+                if n != '?' and n not in path:
+                    new_path = list(path)
+                    new_directions = list(directions)
+
+                    new_path.append(n)
+                    new_directions.append(d)
+
+                    q.enqueue(new_path)
+                    directions_q.enqueue(new_directions)
+
+    def dft_treasure(self, value_1, value_2):
+        q = Queue()
+        directions_q = Queue()
+
         q.enqueue([value_1])
         directions_q.enqueue([])
 
@@ -122,8 +159,17 @@ class Mover:
             if treasure:
                 self._pick_treasure()
 
-    def hunt_treasure(self):
-        pass
+    def hunt_treasure(self, treasure):
+        value = random.randint(0, 499)
+        (directions, path) = self.graph.dft_treasure(
+            self.current_room.get('room_id'), value)
+        (directions_back, path_back) = self.graph.dft_treasure(value,
+                                                      1)
+        self.directions = directions + directions_back
+        self.path = path + path_back
+        print("Directions: ", colored(self.directions, "blue"))
+        print("Path", colored(self.path, "blue"))
+        self.go(treasure)
 
     def go_home(self, treasure):
         (directions, path) = self.graph.dft(
@@ -183,11 +229,14 @@ def print_instructions():
           "- if you are at the shrine you will play")
     print("     -", colored("location <room number>", "green"),
           "- this will take you to a room of your choice")
+    print("     -", colored("hunt", "green"),
+          "- this will take you on a treasure hunting trip and finish at the shop")
 
 
 def call_functions(m, instruction, treasure=False):
     if instruction[1] == "home":
-        text = input(colored("Are you sure you want to go home? [y or n]\n", "yellow"))
+        text = input(
+            colored("Are you sure you want to go home? [y or n]\n", "yellow"))
         if text == "y":
             print("Going home")
             m.go_home(treasure)
@@ -196,7 +245,8 @@ def call_functions(m, instruction, treasure=False):
         else:
             print("enter y or n")
     elif instruction[1] == "shop":
-        text = input(colored("Are you sure you want to go to the shop? [y or n]\n", "yellow"))
+        text = input(
+            colored("Are you sure you want to go to the shop? [y or n]\n", "yellow"))
         if text == "y":
             print("Going to the shop")
             m.go_to_shop(treasure)
@@ -205,7 +255,8 @@ def call_functions(m, instruction, treasure=False):
         else:
             print("enter y or n")
     elif instruction[1] == "shrine":
-        text = input(colored("Are you sure you want to go to the shrine? [y or n]\n", "yellow"))
+        text = input(
+            colored("Are you sure you want to go to the shrine? [y or n]\n", "yellow"))
         if text == "y":
             print("Going to the shrine")
             m.go_to_shrine(treasure)
@@ -214,10 +265,21 @@ def call_functions(m, instruction, treasure=False):
         else:
             print("enter y or n")
     elif instruction[1] == "pray":
-        text = input(colored("Are you sure you want to to pray? [y or n]\n", "yellow"))
+        text = input(
+            colored("Are you sure you want to pray? [y or n]\n", "yellow"))
         if text == "y":
             print("Time to pray")
             m.pray()
+        elif text == "n":
+            print("Ok")
+        else:
+            print("enter y or n")
+    elif instruction[1] == "hunt":
+        text = input(
+            colored("Are you sure you want to go treasure hunting? [y or n]\n", "yellow"))
+        if text == "y":
+            print("Going on a treasure hunt")
+            m.hunt_treasure(treasure)
         elif text == "n":
             print("Ok")
         else:
@@ -242,10 +304,12 @@ def call_functions(m, instruction, treasure=False):
 def start(inputs):
     m = Mover()
     m.init()
+    print(inputs[1])
     if len(inputs) < 2:
         print_instructions()
+    elif inputs[1] == "hunt":
+        call_functions(m, inputs, True)
     else:
-
         text = input(
             colored("\nDo you want to pick treasure along the way? [y or n]\n", "yellow"))
         if text == "y":
