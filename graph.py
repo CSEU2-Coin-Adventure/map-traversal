@@ -75,7 +75,7 @@ class Mover:
         print("Current room: ", self.current_room)
 
     def _get_rooms(self):
-
+        pass
 
     def init(self):
         print('Initiated')
