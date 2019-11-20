@@ -190,40 +190,16 @@ class Mover:
         self.go(treasure)
 
     def go_to_shrine(self, treasure):
-        (directions, path) = self.graph.dft(
-            self.current_room.get('room_id'), 461)
-        self.directions = directions
-        self.path = [str(num) for num in path]
-        print("Directions: ", colored(self.directions, "blue"))
-        print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go_to_location(treasure, 461)
 
     def go_to_well(self, treasure):
-        (directions, path) = self.graph.dft(
-            self.current_room.get('room_id'), 55)
-        self.directions = directions
-        self.path = [str(num) for num in path]
-        print("Directions: ", colored(self.directions, "blue"))
-        print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go_to_location(treasure, 55)
 
     def go_to_transmogriphier(self, treasure):
-        (directions, path) = self.graph.dft(
-            self.current_room.get('room_id'), 495)
-        self.directions = directions
-        self.path = [str(num) for num in path]
-        print("Directions: ", colored(self.directions, "blue"))
-        print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go_to_location(treasure, 495)
 
     def go_to_pirates(self, treasure):
-        (directions, path) = self.graph.dft(
-            self.current_room.get('room_id'), 467)
-        self.directions = directions
-        self.path = [str(num) for num in path]
-        print("Directions: ", colored(self.directions, "blue"))
-        print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go_to_location(treasure, 467)
 
     def go_to_location(self, treasure, value):
         (directions, path) = self.graph.dft(
