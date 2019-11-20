@@ -259,6 +259,13 @@ class Mover:
         else:
             print(colored("You don't seem to be at the shrine", "red"))
 
+    def change_name(self, new_name):
+        confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/", json={
+                                        'name': new_name }, headers={
+                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json() 
+        print("-------------------------")
+        print(colored("You've changed your name to: ", "blue"), new_name)
+
     def mine(self):
         pass
 
@@ -297,6 +304,8 @@ def print_instructions():
           "- this will take you to the transmogrifier from your current location")    
     print("     -", colored("pirates", "green"),
           "- this will take you to the Pirate Ry's to change your name")
+    print("     -", colored("name <new name>", "green"),
+          "- this will change your name to a name of your choice")
 
 
 def call_functions(m, instruction, treasure=False):
@@ -404,8 +413,20 @@ def call_functions(m, instruction, treasure=False):
                 print("Ok")
             else:
                 print("enter y or n")
+
+    elif instruction[1] == "name":
+        if len(instruction) > 2:
+            text = input(
+                f"Are you sure you want to go change your name to {instruction[2]}? [y or n]\n")
+            if text == "y":
+                print(f"Changing name to {instruction[2]}")
+                m.change_name(treasure, instruction[2])
+            elif text == "n":
+                print("Ok")
+            else:
+                print("enter y or n")
         else:
-            print(colored("You need to enter a room number", "red"))
+            print(colored("You need to enter a name", "red"))
     else:
         print_instructions()
 
@@ -425,6 +446,8 @@ def start(inputs):
     elif inputs[1] == "mine":
         call_functions(m, inputs, False)
     elif inputs[1] == "pray":
+        call_functions(m, inputs, False)
+    elif inputs[1] == "name":
         call_functions(m, inputs, False)
     else:
         text = input(
