@@ -136,7 +136,10 @@ class Mover:
         if "tiny treasure" in self.current_room.get('items') or "small treasure" in self.current_room.get('items'):
             treasure = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/take/", json={
                                      'name': 'treasure'}, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
-            print(treasure)
+            print(colored("You've picked up some treasure", "blue"))
+            print("You now have: ", colored(
+                len(treasure.get('items')), "blue"), "items of treasure")
+            print("-------------------------")
             time.sleep(20)
 
     def go(self, treasure):
@@ -164,7 +167,7 @@ class Mover:
         (directions, path) = self.graph.dft_treasure(
             self.current_room.get('room_id'), value)
         (directions_back, path_back) = self.graph.dft_treasure(value,
-                                                      1)
+                                                               1)
         self.directions = directions + directions_back
         self.path = path + path_back
         print("Directions: ", colored(self.directions, "blue"))
@@ -207,6 +210,29 @@ class Mover:
         print("Path", colored(self.path, "blue"))
         self.go(treasure)
 
+    def sell(self):
+        if self.current_room.get("room_id") == 1: 
+            status = self.status()
+            inventory = status.get('inventory')
+
+            for item in range(len(inventory)):
+                result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
+                                        'name': 'treasure'}, headers={
+                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                time.sleep(result.get('cooldown'))
+
+                confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
+                                        'name': 'treasure', "confirm":"yes"}, headers={
+                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                print("-------------------------") 
+                print(colored("Treasure sold", "blue"))
+                print(colored(confirmation.get('messages'), "blue"))
+                print("-------------------------")
+                time.sleep(result.get('cooldown'))
+            self.status()
+        else:
+            print(colored("You're not in the shop", "red"))
+
     def pray(self):
         if self.current_room.get("room_id") == 461:
             result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/pray/", headers={
@@ -214,6 +240,17 @@ class Mover:
             print(result)
         else:
             print(colored("You don't seem to be at the shrine", "red"))
+
+    def status(self):
+        current_status = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/status/", headers={
+            'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+        
+        print("-------------------------")
+        print(colored("Name: ", "green"), current_status.get("name"))
+        print(colored("Gold: ", "yellow"), current_status.get("gold"))
+        print(colored("Inventory: ", "green"), current_status.get("inventory"))
+
+        return current_status
 
 
 def print_instructions():
@@ -231,6 +268,10 @@ def print_instructions():
           "- this will take you to a room of your choice")
     print("     -", colored("hunt", "green"),
           "- this will take you on a treasure hunting trip and finish at the shop")
+    print("     -", colored("status", "green"),
+          "- this will display your players current status")
+    print("     -", colored("sell", "green"),
+          "- if you are at the shop this will sell all you treasure")
 
 
 def call_functions(m, instruction, treasure=False):
@@ -274,12 +315,25 @@ def call_functions(m, instruction, treasure=False):
             print("Ok")
         else:
             print("enter y or n")
+    elif instruction[1] == "status":
+        print("Checking status...")
+        m.status()
     elif instruction[1] == "hunt":
         text = input(
             colored("Are you sure you want to go treasure hunting? [y or n]\n", "yellow"))
         if text == "y":
             print("Going on a treasure hunt")
             m.hunt_treasure(treasure)
+        elif text == "n":
+            print("Ok")
+        else:
+            print("enter y or n")
+    elif instruction[1] == "sell":
+        text = input(
+            colored("Are you sure you want to sell all your treasure? [y or n]\n", "yellow"))
+        if text == "y":
+            print("Selling treasure...")
+            m.sell()
         elif text == "n":
             print("Ok")
         else:
@@ -304,11 +358,15 @@ def call_functions(m, instruction, treasure=False):
 def start(inputs):
     m = Mover()
     m.init()
-    print(inputs[1])
+
     if len(inputs) < 2:
         print_instructions()
     elif inputs[1] == "hunt":
         call_functions(m, inputs, True)
+    elif inputs[1] == "status":
+        call_functions(m, inputs, False)
+    elif inputs[1] == "sell":
+        call_functions(m, inputs, False)
     else:
         text = input(
             colored("\nDo you want to pick treasure along the way? [y or n]\n", "yellow"))
