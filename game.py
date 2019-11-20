@@ -6,8 +6,6 @@ import sys
 import random
 import hashlib
 from termcolor import colored
-
-
 class Queue:
     def __init__(self):
         self.queue = []
