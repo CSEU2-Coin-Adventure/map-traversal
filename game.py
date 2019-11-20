@@ -6,6 +6,9 @@ import sys
 import random
 import hashlib
 from termcolor import colored
+
+api_key = "" # [API_KEY_HERE]
+
 class Queue:
     def __init__(self):
         self.queue = []
@@ -98,7 +101,6 @@ class Graph:
                     q.enqueue(new_path)
                     directions_q.enqueue(new_directions)
 
-
 class Mover:
     def __init__(self):
         self.graph = None
@@ -109,7 +111,7 @@ class Mover:
 
     def _set_current_room(self):
         room = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/adv/init/", headers={
-            'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+            'Authorization': api_key}).json()
         self.current_room = room
         print("-------------------------")
         print(colored("You've in: ", "green"), room.get('room_id'))
@@ -134,7 +136,7 @@ class Mover:
     def _pick_treasure(self):
         if "tiny treasure" in self.current_room.get('items') or "small treasure" in self.current_room.get('items'):
             treasure = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/take/", json={
-                                     'name': 'treasure'}, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                     'name': 'treasure'}, headers={'Authorization': api_key}).json()
             print(colored("You've picked up some treasure", "blue"))
             print("-------------------------")
             time.sleep(20)
@@ -142,7 +144,7 @@ class Mover:
     def go(self, treasure):
         for (i, d) in enumerate(self.directions):
             new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json={
-                'direction': d}, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                'direction': d}, headers={'Authorization': api_key}).json()
             self.current_room = new_room
             print(colored("You've in: ", "green"), new_room.get('room_id'))
             print(colored("It's a: ", "green"), new_room.get('title'))
@@ -172,22 +174,10 @@ class Mover:
         self.go(treasure)
 
     def go_home(self, treasure):
-        (directions, path) = self.graph.dft(
-            self.current_room.get('room_id'), 0)
-        self.directions = directions
-        self.path = [str(num) for num in path]
-        print("Directions: ", colored(self.directions, "blue"))
-        print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go_to_location(treasure, 0)
 
     def go_to_shop(self, treasure):
-        (directions, path) = self.graph.dft(
-            self.current_room.get('room_id'), 1)
-        self.directions = directions
-        self.path = [str(num) for num in path]
-        print("Directions: ", colored(self.directions, "blue"))
-        print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go_to_location(treasure, 1)
 
     def go_to_shrine(self, treasure):
         self.go_to_location(treasure, 461)
@@ -218,12 +208,12 @@ class Mover:
             for item in range(len(inventory)):
                 result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
                                         'name': 'treasure'}, headers={
-                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                'Authorization': api_key}).json()
                 time.sleep(result.get('cooldown'))
 
                 confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
                                         'name': 'treasure', "confirm": "yes"}, headers={
-                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                'Authorization': api_key}).json()
                 print("-------------------------")
                 print(colored("Treasure sold", "blue"))
                 print(colored(confirmation.get('messages'), "blue"))
@@ -236,7 +226,7 @@ class Mover:
     def pray(self):
         if self.current_room.get("room_id") == 461:
             result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/pray/", headers={
-                                   'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                   'Authorization': api_key}).json()
             print(result)
         else:
             print(colored("You don't seem to be at the shrine", "red"))
@@ -244,12 +234,12 @@ class Mover:
     def change_name(self, new_name):
         confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/", json={
                                         'name': new_name }, headers={
-                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                'Authorization': api_key}).json()
         time.sleep(confirmation.get('cooldown'))
 
         confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/", json={
                                         'name': new_name, 'confirm': 'aye' }, headers={
-                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                'Authorization': api_key}).json()
         print("-------------------------")
         print(confirmation)
         print(colored("You've changed your name to: ", "blue"), new_name)
@@ -258,7 +248,7 @@ class Mover:
 
     def _get_proof(self):
         proof = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/bc/last_proof/", headers={
-                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+                                'Authorization': api_key}).json()
         return proof
 
     def mine(self):
@@ -266,7 +256,7 @@ class Mover:
 
     def status(self):
         current_status = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/status/", headers={
-            'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+            'Authorization': api_key}).json()
 
         print("-------------------------")
         print(colored("Name: ", "green"), current_status.get("name"))
