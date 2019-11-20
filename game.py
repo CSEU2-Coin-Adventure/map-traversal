@@ -114,6 +114,7 @@ class Mover:
             'Authorization': api_key}).json()
         self.current_room = room
         print("-------------------------")
+        print(room)
         print(colored("You've in: ", "green"), room.get('room_id'))
         print(colored("It's a: ", "green"), room.get('title'))
         print(colored("About: ", "green"), room.get('description'))
@@ -144,7 +145,7 @@ class Mover:
     def go(self, treasure):
         for (i, d) in enumerate(self.directions):
             new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json={
-                'direction': d, "next_room_id": self.path[i + 1] }, headers={'Authorization': api_key}).json()
+                "direction": d, "next_room_id": self.path[i + 1] }, headers={'Authorization': api_key }).json()
             self.current_room = new_room
             print(colored("You've in: ", "green"), new_room.get('room_id'))
             print(colored("It's a: ", "green"), new_room.get('title'))
@@ -168,7 +169,8 @@ class Mover:
         (directions_back, path_back) = self.graph.dft_treasure(value,
                                                                1)
         self.directions = directions + directions_back
-        self.path = path + path_back
+        total_path = path + path_back
+        self.path = [str(num) for num in total_path]
         print("Directions: ", colored(self.directions, "blue"))
         print("Path", colored(self.path, "blue"))
         self.go(treasure)
@@ -252,13 +254,21 @@ class Mover:
         return proof
 
     def mine(self):
-        self._get_proof()
+        proof = self._get_proof()
+        print(proof)
+
+    def examine(self, name):
+        examination = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/examine", json={
+                                        'name': name }, headers={
+                                'Authorization': api_key}).json()
+        print(examination)
 
     def status(self):
         current_status = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/status/", headers={
             'Authorization': api_key}).json()
 
         print("-------------------------")
+        print(current_status)
         print(colored("Name: ", "green"), current_status.get("name"))
         print(colored("Gold: ", "yellow"), current_status.get("gold"))
         print(colored("Inventory: ", "green"), current_status.get("inventory"))
@@ -293,6 +303,8 @@ def print_instructions():
           "- this will change your name to a name of your choice")
     print("     -", colored("well", "green"),
           "- this will change your name to a name of your choice")
+    print("     -", colored("examine", "green"),
+          "- allows you to examine the well")
 
 
 def call_functions(m, instruction, treasure=False):
@@ -411,6 +423,20 @@ def call_functions(m, instruction, treasure=False):
             else:
                 print("enter y or n")
 
+    elif instruction[1] == "examine":
+        if len(instruction) > 2:
+            text = input(
+                f"Do you want to examine {instruction[2]}? [y or n]\n")
+            if text == "y":
+                print(f"Examining {instruction[2]}")
+                m.examine(instruction[2])
+            elif text == "n":
+                print("Ok")
+            else:
+                print("enter y or n")
+        else:
+            print(colored("You need to enter a name or item to examine", "red"))
+
     elif instruction[1] == "name":
         if len(instruction) > 2:
             text = input(
@@ -445,6 +471,8 @@ def start(inputs):
     elif inputs[1] == "pray":
         call_functions(m, inputs, False)
     elif inputs[1] == "name":
+        call_functions(m, inputs, False)
+    elif inputs[1] == "examine":
         call_functions(m, inputs, False)
     else:
         text = input(
