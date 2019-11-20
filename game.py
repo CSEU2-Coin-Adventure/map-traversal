@@ -7,7 +7,7 @@ import random
 import hashlib
 from termcolor import colored
 
-api_key = "" # [API_KEY_HERE]
+api_key = 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' # [API_KEY_HERE]
 
 class Queue:
     def __init__(self):
@@ -144,7 +144,7 @@ class Mover:
     def go(self, treasure):
         for (i, d) in enumerate(self.directions):
             new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json={
-                'direction': d}, headers={'Authorization': api_key}).json()
+                'direction': d, "next_room_id": self.path[i + 1] }, headers={'Authorization': api_key}).json()
             self.current_room = new_room
             print(colored("You've in: ", "green"), new_room.get('room_id'))
             print(colored("It's a: ", "green"), new_room.get('title'))
