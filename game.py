@@ -4,6 +4,7 @@ import requests
 import csv
 import sys
 import random
+import hashlib
 from termcolor import colored
 
 
@@ -201,6 +202,15 @@ class Mover:
         print("Path", colored(self.path, "blue"))
         self.go(treasure)
 
+    def go_to_well(self, treasure):
+        (directions, path) = self.graph.dft(
+            self.current_room.get('room_id'), 55)
+        self.directions = directions
+        self.path = [str(num) for num in path]
+        print("Directions: ", colored(self.directions, "blue"))
+        print("Path", colored(self.path, "blue"))
+        self.go(treasure)
+
     def go_to_transmogriphier(self, treasure):
         (directions, path) = self.graph.dft(
             self.current_room.get('room_id'), 495)
@@ -262,12 +272,25 @@ class Mover:
     def change_name(self, new_name):
         confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/", json={
                                         'name': new_name }, headers={
-                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json() 
+                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+        time.sleep(confirmation.get('cooldown'))
+
+        confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/", json={
+                                        'name': new_name, 'confirm': 'aye' }, headers={
+                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
         print("-------------------------")
+        print(confirmation)
         print(colored("You've changed your name to: ", "blue"), new_name)
+        print("-------------------------")
+        self.status()
+
+    def _get_proof(self):
+        proof = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/bc/last_proof/", headers={
+                                'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+        return proof
 
     def mine(self):
-        pass
+        self._get_proof()
 
     def status(self):
         current_status = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/status/", headers={
@@ -306,6 +329,8 @@ def print_instructions():
           "- this will take you to the Pirate Ry's to change your name")
     print("     -", colored("name <new name>", "green"),
           "- this will change your name to a name of your choice")
+    print("     -", colored("well", "green"),
+          "- this will change your name to a name of your choice")
 
 
 def call_functions(m, instruction, treasure=False):
@@ -335,6 +360,16 @@ def call_functions(m, instruction, treasure=False):
         if text == "y":
             print("Going to the shrine")
             m.go_to_shrine(treasure)
+        elif text == "n":
+            print("Ok")
+        else:
+            print("enter y or n")
+    elif instruction[1] == "well":
+        text = input(
+            colored("Are you sure you want to go to the well? [y or n]\n", "yellow"))
+        if text == "y":
+            print("Going to the well")
+            m.go_to_well(treasure)
         elif text == "n":
             print("Ok")
         else:
@@ -420,7 +455,7 @@ def call_functions(m, instruction, treasure=False):
                 f"Are you sure you want to go change your name to {instruction[2]}? [y or n]\n")
             if text == "y":
                 print(f"Changing name to {instruction[2]}")
-                m.change_name(treasure, instruction[2])
+                m.change_name(instruction[2])
             elif text == "n":
                 print("Ok")
             else:
