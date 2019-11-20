@@ -75,11 +75,11 @@ class Mover:
             'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
         self.current_room = room
         print("-------------------------")
-        print("You've in: ", room.get('room_id'))
-        print("It's a: ", room.get('title'))
-        print("About: ", room.get('description'))
-        print("Additional info: ", room.get('messages'))
-        print("Current cool down: ", room.get('cooldown'))
+        print(colored("You've in: ", "green"), room.get('room_id'))
+        print(colored("It's a: ", "green"), room.get('title'))
+        print(colored("About: ", "green"), room.get('description'))
+        print(colored("Additional info: ", "green"), room.get('messages'))
+        print(colored("Current cooldown: ", "green"), room.get('cooldown'))
         print("-------------------------")
         time.sleep(room.get('cooldown'))
 
@@ -87,7 +87,8 @@ class Mover:
         pass
 
     def init(self):
-        print('Initiated')
+        print("-------------------------")
+        print(colored('Initiated', "yellow"))
         self._set_current_room()
         g = Graph()
         g.init()
@@ -97,13 +98,11 @@ class Mover:
         for (i, d) in enumerate(self.directions):
             new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json={
                 'direction': d}, headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
-            print(new_room)
-            print("-------------------------")
-            print("You've entered room: ", new_room.get('room_id'))
-            print("It's a: ", new_room.get('title'))
-            print("About: ", new_room.get('description'))
-            print("Additional info: ", new_room.get('messages'))
-            print("Current cool down: ", new_room.get('cooldown'))
+            print(colored("You've in: ", "green"), new_room.get('room_id'))
+            print(colored("It's a: ", "green"), new_room.get('title'))
+            print(colored("About: ", "green"), new_room.get('description'))
+            print(colored("Additional info: ", "green"), new_room.get('messages'))
+            print(colored("Current cooldown: ", "green"), new_room.get('cooldown'))
             print("-------------------------")
             time.sleep(new_room.get('cooldown'))
 
@@ -115,16 +114,17 @@ class Mover:
             self.current_room.get('room_id'), 0)
         self.directions = directions
         self.path = [str(num) for num in path]
-        print("Directions: ", self.directions)
-        print("Path", self.path)
+        print("Directions: ", colored(self.directions, "blue"))
+        print("Path", colored(self.path, "blue"))
+        self.go()
 
     def go_to_shop(self):
         (directions, path) = self.graph.dft(
             self.current_room.get('room_id'), 1)
         self.directions = directions
         self.path = [str(num) for num in path]
-        print("Directions: ", self.directions)
-        print("Path", self.path)
+        print("Directions: ", colored(self.directions, "blue"))
+        print("Path", colored(self.path, "blue"))
         self.go()
 
     def go_to_shrine(self):
@@ -132,28 +132,29 @@ class Mover:
             self.current_room.get('room_id'), 461)
         self.directions = directions
         self.path = [str(num) for num in path]
-        print("Directions: ", self.directions)
-        print("Path", self.path)
+        print("Directions: ", colored(self.directions, "blue"))
+        print("Path", colored(self.path, "blue"))
         self.go()
 
     def pray(self):
-        if self.current_room == 461:
-            pass
+        if self.current_room.get("room_id") == 461:
+           result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/pray/", headers={'Authorization': 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c'}).json()
+           print(result)
         else:
-            print("You don't seem to be at the shrine")
+            print(colored("You don't seem to be at the shrine", "red"))
 
 def print_instructions():
-    print("You need to enter a command.")
-    print("Enter one of the following")
-    print("     - home - this will take you back to 0 from your current location")
-    print("     - shop - this will take you to the shop from your current location")
-    print("     - shrine - this will take you to the shop from your current location")
+    print(colored("\nYou need to enter a command.\n", "red"))
+    print("Enter one of the following:\n")
+    print("     -", colored("home", "green"), " - this will take you back to 0 from your current location")
+    print("     -", colored("shop", "green"), " - this will take you to the shop from your current location")
+    print("     -", colored("shrine", "green"), " - this will take you to the shrine from your current location")
+    print("     -", colored("pray", "green"), "- if you are at the shrine you will play")
 
 
 def start(inputs):
     m = Mover()
     m.init()
-    print(inputs)
     if len(inputs) < 2:
         print_instructions()
     elif inputs[1] == "home":
@@ -175,10 +176,19 @@ def start(inputs):
         else:
             print("enter y or n")
     elif inputs[1] == "shrine":
-        text = input("Are you sure you want to go to the shop? [y or n]\n")
+        text = input("Are you sure you want to go to the shrine? [y or n]\n")
         if text == "y":
             print("Going to the shrine")
             m.go_to_shrine()
+        elif text == "n":
+            print("Ok")
+        else:
+            print("enter y or n")
+    elif inputs[1] == "pray":
+        text = input("Are you sure you want to go to pray? [y or n]\n")
+        if text == "y":
+            print("Time to pray")
+            m.pray()
         elif text == "n":
             print("Ok")
         else:
