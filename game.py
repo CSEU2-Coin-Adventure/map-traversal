@@ -6,9 +6,10 @@ import sys
 import random
 import hashlib
 from termcolor import colored
-# import argparse
+import argparse
+from cpu import *
 
-# parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
 
 api_key = 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' # [API_KEY_HERE]
 
@@ -111,6 +112,9 @@ class Mover:
         self.rooms = {}
         self.current_room = None
 
+        self.treasure = False
+        self.dash = False
+
     def _set_current_room(self):
         room = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/adv/init/", headers={
             'Authorization': api_key}).json()
@@ -177,7 +181,7 @@ class Mover:
                 new_room.get('cooldown'))
         print("-------------------------")
 
-    def dash(self, treasure):
+    def go_dash(self):
         (dash_directions, dash_path) = self._dash_map()
 
         for (i, d) in enumerate(dash_directions):
@@ -202,7 +206,7 @@ class Mover:
                 self._print_room(new_room)
                 time.sleep(new_room.get('cooldown'))         
 
-    def go(self, treasure):
+    def go(self):
         # loop through directions
         # if the next one is the same add it to list if it's not create a new list
 
@@ -213,10 +217,10 @@ class Mover:
             self._print_room(new_room)
             time.sleep(new_room.get('cooldown'))
 
-            if treasure:
+            if self.treasure:
                 self._pick_treasure()
 
-    def hunt_treasure(self, treasure):
+    def hunt_treasure(self):
         value = random.randint(0, 499)
         (directions, path) = self.graph.dft_treasure(
             self.current_room.get('room_id'), value)
@@ -227,35 +231,19 @@ class Mover:
         self.path = [str(num) for num in total_path]
         print("Directions: ", colored(self.directions, "blue"))
         print("Path", colored(self.path, "blue"))
-        self.go(treasure)
+        self.go()
 
-    def go_home(self, treasure):
-        self.go_to_location(treasure, 0)
-
-    def go_to_shop(self, treasure):
-        self.go_to_location(treasure, 1)
-
-    def go_to_shrine(self, treasure):
-        self.go_to_location(treasure, 461)
-
-    def go_to_well(self, treasure):
-        self.go_to_location(treasure, 55)
-
-    def go_to_transmogriphier(self, treasure):
-        self.go_to_location(treasure, 495)
-
-    def go_to_pirates(self, treasure):
-        self.go_to_location(treasure, 467)
-
-    def go_to_location(self, treasure, value):
+    def go_to_location(self, value):
         (directions, path) = self.graph.dft(
             self.current_room.get('room_id'), int(value))
         self.directions = directions
         self.path = [str(num) for num in path]
         print("Directions: ", colored(self.directions, "blue"))
         print("Path", colored(self.path, "blue"))
-        self.go(treasure)
-        # self.dash(treasure)
+        if self.dash:
+            self.go_dash()
+        else:
+            self.go()
 
     def sell(self):
         if self.current_room.get("room_id") == 1:
@@ -263,19 +251,20 @@ class Mover:
             inventory = status.get('inventory')
 
             for item in range(len(inventory)):
-                result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
-                                        'name': 'treasure'}, headers={
-                                'Authorization': api_key}).json()
-                time.sleep(result.get('cooldown'))
+                if item == 'small treasure' or item == 'tiny treasure':
+                    result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
+                                            'name': 'treasure'}, headers={
+                                    'Authorization': api_key}).json()
+                    time.sleep(result.get('cooldown'))
 
-                confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
-                                        'name': 'treasure', "confirm": "yes"}, headers={
-                                'Authorization': api_key}).json()
-                print("-------------------------")
-                print(colored("Treasure sold", "blue"))
-                print(colored(confirmation.get('messages'), "blue"))
-                print("-------------------------")
-                time.sleep(result.get('cooldown'))
+                    confirmation = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
+                                            'name': 'treasure', "confirm": "yes"}, headers={
+                                    'Authorization': api_key}).json()
+                    print("-------------------------")
+                    print(colored("Treasure sold", "blue"))
+                    print(colored(confirmation.get('messages'), "blue"))
+                    print("-------------------------")
+                    time.sleep(result.get('cooldown'))
             self.status()
         else:
             print(colored("You're not in the shop", "red"))
@@ -331,11 +320,21 @@ class Mover:
 
         print(result)
 
-    def examine(self, name):
+    def examine(self):
         examination = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/examine", json={
-                                        'name': name }, headers={
+                                        'name': 'well' }, headers={
                                 'Authorization': api_key}).json()
-        print(examination)
+        code = examination.get('description')
+        code = code.split('...')
+        code = code[1].split('\n')
+
+        with open('machine-code.txt', 'w') as f:
+            for line in code:
+                f.write("%s\n" % line)
+
+        cpu = CPU()
+        cpu.load()
+        cpu.run()
 
     def status(self):
         current_status = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/status/", headers={
@@ -379,184 +378,91 @@ def print_instructions():
     print("     -", colored("examine", "green"),
           "- allows you to examine the well")
 
-def call_functions(m, instruction, treasure=False):
-    if instruction[1] == "home":
-        text = input(
-            colored("Are you sure you want to go home? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going home")
-            m.go_home(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "shop":
-        text = input(
-            colored("Are you sure you want to go to the shop? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going to the shop")
-            m.go_to_shop(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "shrine":
-        text = input(
-            colored("Are you sure you want to go to the shrine? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going to the shrine")
-            m.go_to_shrine(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "well":
-        text = input(
-            colored("Are you sure you want to go to the well? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going to the well")
-            m.go_to_well(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "trans":
-        text = input(
-            colored("Are you sure you want to go to the transmogrifier? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going to the transmogrifier")
-            m.go_to_transmogriphier(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "pirates":
-        text = input(
-            colored("Are you sure you want to go to the pirate's ry to change your name? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going to change your name")
-            m.go_to_pirates(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "pray":
-        text = input(
-            colored("Are you sure you want to pray? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Time to pray")
-            m.pray()
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "status":
-        print("Checking status...")
-        m.status()
-    elif instruction[1] == "hunt":
-        text = input(
-            colored("Are you sure you want to go treasure hunting? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Going on a treasure hunt")
-            m.hunt_treasure(treasure)
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "sell":
-        text = input(
-            colored("Are you sure you want to sell all your treasure? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Selling treasure...")
-            m.sell()
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "mine":
-        text = input(
-            colored("Are you sure you want to do some mining? [y or n]\n", "yellow"))
-        if text == "y":
-            print("Mining...")
-            m.mine()
-        elif text == "n":
-            print("Ok")
-        else:
-            print("enter y or n")
-    elif instruction[1] == "location" or instruction[1] == "loco":
-        if len(instruction) > 2:
-            text = input(
-                f"Are you sure you want to go to room {instruction[2]}? [y or n]\n")
-            if text == "y":
-                print(f"Going to {instruction[2]}")
-                m.go_to_location(treasure, instruction[2])
-            elif text == "n":
-                print("Ok")
-            else:
-                print("enter y or n")
+def print_info():
+    print(colored("-i", "green"))
+    print(colored("Possible arguments:", "blue"))
+    print('home')
+    print('shop')
+    print('shrine')
+    print('well')
+    print('pray')
+    print('move (must also use -r flag)')
+    print('pirates')
+    print('trans')
+    print('hunt')
+    print('status')
+    print('examine')
+    print('mine\n')
+    print(colored('-r', "green"))
+    print(colored("Sets a room (to use with move)", "blue"))
+    print("E.g. -i move -r 210\n")
+    print(colored('-d', "green"))
+    print(colored("Sets dash to true\n", "blue"))
+    print(colored('-t', "green"))
+    print(colored("Sets treasure to true\n", "blue"))
 
-    elif instruction[1] == "examine":
-        if len(instruction) > 2:
-            text = input(
-                f"Do you want to examine {instruction[2]}? [y or n]\n")
-            if text == "y":
-                print(f"Examining {instruction[2]}")
-                m.examine(instruction[2])
-            elif text == "n":
-                print("Ok")
-            else:
-                print("enter y or n")
-        else:
-            print(colored("You need to enter a name or item to examine", "red"))
+def call_methods(m, arg):
 
-    elif instruction[1] == "name":
-        if len(instruction) > 2:
-            text = input(
-                f"Are you sure you want to go change your name to {instruction[2]}? [y or n]\n")
-            if text == "y":
-                print(f"Changing name to {instruction[2]}")
-                m.change_name(instruction[2])
-            elif text == "n":
-                print("Ok")
-            else:
-                print("enter y or n")
-        else:
-            print(colored("You need to enter a name", "red"))
+    rooms = {
+        'home': 0,
+        'shop': 1,
+        'shrine': 461,
+        'well': 55,
+        'pray': None,
+        'move': arg.room,
+        'pirates': 467,
+        'trans':495,
+        'hunt': None,
+        'status': None,
+        'examine': None,
+        'mine': None
+    }
+
+    methods = {
+        'home': m.go_to_location,
+        'shop': m.go_to_location,
+        'shrine': m.go_to_location,
+        'well': m.go_to_location,
+        'pray': m.pray,
+        'move': m.go_to_location,
+        'pirates': m.go_to_location,
+        'trans': m.go_to_location,
+        'hunt': m.hunt_treasure,
+        'status': m.status,
+        'examine': m.examine,
+        'mine': m.mine
+    }
+
+    x = rooms[arg.instruction]
+    if x:
+        methods[arg.instruction](x)
     else:
-        print_instructions()
+        methods[arg.instruction]()
 
-def start(inputs):
-    # parser.add_argument("-d", "--dash", help="Set dash")
-    # parser.add_argument("-i", "--instruction", help="Give instruction")
-    # parser.add_argument("-r", "--room", help="Choose room")
-    # parser.add_argument("-t", "--treasure", help="Collect treasure")
-    # args = parser.parse_args()
+def start():
+    parser.add_argument("-i", "--instruction", help="Give instruction")
+    parser.add_argument("-d", action='store_true', help="Set dash")
+    parser.add_argument("-r", "--room", help="Choose room")
+    parser.add_argument("-t", action='store_true', help="Collect treasure")
+    parser.add_argument("-help", action='store_true')
+
+    args = parser.parse_args()
+
+    if len(sys.argv) < 2:
+        return print(colored("No arguments, enter -help flag to see options", "red"))
+
+    if args.help:
+        return print_info()
 
     m = Mover()
     m.init()
 
-    if len(inputs) < 2:
-        print_instructions()
-    elif inputs[1] == "hunt":
-        call_functions(m, inputs, True)
-    elif inputs[1] == "status":
-        call_functions(m, inputs, False)
-    elif inputs[1] == "sell":
-        call_functions(m, inputs, False)
-    elif inputs[1] == "mine":
-        call_functions(m, inputs, False)
-    elif inputs[1] == "pray":
-        call_functions(m, inputs, False)
-    elif inputs[1] == "name":
-        call_functions(m, inputs, False)
-    elif inputs[1] == "examine":
-        call_functions(m, inputs, False)
-    else:
-        text = input(
-            colored("\nDo you want to pick treasure along the way? [y or n]\n", "yellow"))
-        if text == "y":
-            call_functions(m, inputs, True)
-        else:
-            call_functions(m, inputs, False)
+    if args.t:
+        m.treasure = True
 
-start(sys.argv)
+    if args.d:
+        m.dash = True
+
+    call_methods(m, args)
+
+start()
