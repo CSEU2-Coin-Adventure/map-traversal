@@ -250,8 +250,9 @@ class Mover:
             status = self.status()
             inventory = status.get('inventory')
 
-            for item in range(len(inventory)):
-                if item == 'small treasure' or item == 'tiny treasure':
+            for i in range(len(inventory)):
+                
+                if inventory[i] == 'small treasure' or inventory[i] == 'tiny treasure':
                     result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/", json={
                                             'name': 'treasure'}, headers={
                                     'Authorization': api_key}).json()
@@ -320,6 +321,13 @@ class Mover:
 
         print(result)
 
+    def transmogrify(self, name):
+        result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/transmogrify/", json={
+                                        'name': name }, headers={
+                                'Authorization': api_key}).json()
+        print(result)
+        time.sleep(confirmation.get('cooldown'))        
+
     def examine(self):
         examination = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/examine", json={
                                         'name': 'well' }, headers={
@@ -348,6 +356,12 @@ class Mover:
 
         return current_status
 
+    def balance(self):
+        balance = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/bc/get_balance/", headers={
+            'Authorization': api_key}).json()
+
+        print(balance)
+
 def print_info():
     print(colored("-i", "green"))
     print(colored("Possible arguments:", "blue"))
@@ -362,6 +376,7 @@ def print_info():
     print('hunt')
     print('status')
     print('examine')
+    print('balance')
     print('mine\n')
     print(colored('-r', "green"))
     print(colored("Sets a room (to use with move)", "blue"))
@@ -381,11 +396,14 @@ def call_methods(m, arg):
         'pray': None,
         'move': arg.room,
         'pirates': 467,
-        'trans':495,
+        'trans': 495,
         'hunt': None,
         'status': None,
         'examine': None,
-        'mine': None
+        'mine': None,
+        'sell': None,
+        'balance': None,
+        'transmog': arg.item
     }
 
     methods = {
@@ -400,7 +418,9 @@ def call_methods(m, arg):
         'hunt': m.hunt_treasure,
         'status': m.status,
         'examine': m.examine,
-        'mine': m.mine
+        'mine': m.mine,
+        'sell': m.sell,
+        'balance': m.balance
     }
 
     x = rooms[arg.instruction]
@@ -414,6 +434,7 @@ def start():
     parser.add_argument("-d", action='store_true', help="Set dash")
     parser.add_argument("-r", "--room", help="Choose room")
     parser.add_argument("-t", action='store_true', help="Collect treasure")
+    parser.add_argument("-item", "--item", help="Select Item")
     parser.add_argument("-help", action='store_true')
 
     args = parser.parse_args()
