@@ -348,36 +348,6 @@ class Mover:
 
         return current_status
 
-def print_instructions():
-    print(colored("\nYou need to enter a command.\n", "red"))
-    print("Enter one of the following:\n")
-    print("     -", colored("home", "green"),
-          " - this will take you back to 0 from your current location")
-    print("     -", colored("shop", "green"),
-          " - this will take you to the shop from your current location")
-    print("     -", colored("shrine", "green"),
-          " - this will take you to the shrine from your current location")
-    print("     -", colored("pray", "green"),
-          "- if you are at the shrine you will play")
-    print("     -", colored("location <room number>", "green"),
-          "- this will take you to a room of your choice")
-    print("     -", colored("hunt", "green"),
-          "- this will take you on a treasure hunting trip and finish at the shop")
-    print("     -", colored("status", "green"),
-          "- this will display your players current status")
-    print("     -", colored("sell", "green"),
-          "- if you are at the shop, this will sell all you treasure")
-    print("     -", colored("trans", "green"),
-          "- this will take you to the transmogrifier from your current location")    
-    print("     -", colored("pirates", "green"),
-          "- this will take you to the Pirate Ry's to change your name")
-    print("     -", colored("name <new name>", "green"),
-          "- this will change your name to a name of your choice")
-    print("     -", colored("well", "green"),
-          "- this will change your name to a name of your choice")
-    print("     -", colored("examine", "green"),
-          "- allows you to examine the well")
-
 def print_info():
     print(colored("-i", "green"))
     print(colored("Possible arguments:", "blue"))
