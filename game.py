@@ -6,9 +6,9 @@ import sys
 import random
 import hashlib
 from termcolor import colored
-import argparse
+# import argparse
 
-parser = argparse.ArgumentParser()
+# parser = argparse.ArgumentParser()
 
 api_key = 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' # [API_KEY_HERE]
 
