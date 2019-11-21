@@ -6,6 +6,9 @@ import sys
 import random
 import hashlib
 from termcolor import colored
+import argparse
+
+parser = argparse.ArgumentParser()
 
 api_key = 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' # [API_KEY_HERE]
 
@@ -24,7 +27,6 @@ class Queue:
 
     def length(self):
         return len(self.queue)
-
 
 class Graph:
     def __init__(self):
@@ -142,21 +144,73 @@ class Mover:
             print("-------------------------")
             time.sleep(20)
 
+    def _dash_map(self):
+        path = self.path[1:]
+
+        dash_directions = [[]]
+        dash_path = [[]]
+        current_index = 0
+
+        for (i, d) in enumerate(self.directions):
+            if i == 0:
+                dash_directions[current_index].append(d)
+                dash_path[current_index].append(path[i])
+            elif not len(dash_directions[current_index]) or d == self.directions[i -1]:
+                dash_path[current_index].append(path[i])
+                dash_directions[current_index].append(d)
+            else:
+                dash_directions.append([d])
+                dash_path.append([path[i]])
+                current_index += 1
+
+        return (dash_directions, dash_path)
+
+    def _print_room(self, new_room):
+        print(colored("You've in: ", "green"), new_room.get('room_id'))
+        print(colored("It's a: ", "green"), new_room.get('title'))
+        print(colored("About: ", "green"), new_room.get('description'))
+        print(colored("It has these things in: ",
+                        "green"), new_room.get('items'))
+        print(colored("Additional info: ", "green"),
+                new_room.get('messages'))
+        print(colored("Current cooldown: ", "green"),
+                new_room.get('cooldown'))
+        print("-------------------------")
+
+    def dash(self, treasure):
+        (dash_directions, dash_path) = self._dash_map()
+
+        for (i, d) in enumerate(dash_directions):
+
+            if len(d) > 1:
+                directions_str = ""
+                for (idx, p) in enumerate(dash_path[i]):
+                    if not idx == len(dash_path[i]) - 1:
+                        directions_str += p + ","
+                    else:
+                        directions_str += p
+                
+                new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/dash/", json={
+                    "direction": d[0], "num_rooms": str(len(dash_path[i])), "next_room_ids": directions_str }, headers={'Authorization': api_key }).json()  
+                self.current_room = new_room
+                self._print_room(new_room)
+                time.sleep(new_room.get('cooldown'))
+            else:
+                new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json={
+                "direction": d[0], "next_room_id": dash_path[i][0] }, headers={'Authorization': api_key }).json()
+                self.current_room = new_room
+                self._print_room(new_room)
+                time.sleep(new_room.get('cooldown'))         
+
     def go(self, treasure):
+        # loop through directions
+        # if the next one is the same add it to list if it's not create a new list
+
         for (i, d) in enumerate(self.directions):
             new_room = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", json={
                 "direction": d, "next_room_id": self.path[i + 1] }, headers={'Authorization': api_key }).json()
             self.current_room = new_room
-            print(colored("You've in: ", "green"), new_room.get('room_id'))
-            print(colored("It's a: ", "green"), new_room.get('title'))
-            print(colored("About: ", "green"), new_room.get('description'))
-            print(colored("It has these things in: ",
-                          "green"), new_room.get('items'))
-            print(colored("Additional info: ", "green"),
-                  new_room.get('messages'))
-            print(colored("Current cooldown: ", "green"),
-                  new_room.get('cooldown'))
-            print("-------------------------")
+            self._print_room(new_room)
             time.sleep(new_room.get('cooldown'))
 
             if treasure:
@@ -201,6 +255,7 @@ class Mover:
         print("Directions: ", colored(self.directions, "blue"))
         print("Path", colored(self.path, "blue"))
         self.go(treasure)
+        # self.dash(treasure)
 
     def sell(self):
         if self.current_room.get("room_id") == 1:
@@ -248,14 +303,33 @@ class Mover:
         print("-------------------------")
         self.status()
 
+    def _check_proof(self, value, difficulty):
+        return value[:difficulty] == "0" * difficulty
+            
     def _get_proof(self):
         proof = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/bc/last_proof/", headers={
                                 'Authorization': api_key}).json()
-        return proof
+        previous_proof = proof.get('proof')
+        difficulty = proof.get('difficulty')
+        print(proof)
+        nonce = 0
+
+        while True:
+            nonce += 1
+            guess = f'{previous_proof}{nonce}'.encode()
+            hash_value = hashlib.sha256(guess).hexdigest()
+   
+            if self._check_proof(hash_value, difficulty):
+                return nonce
 
     def mine(self):
         proof = self._get_proof()
-        print(proof)
+
+        result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/bc/mine/", json={
+                                        'proof': proof }, headers={
+                                'Authorization': api_key}).json()
+
+        print(result)
 
     def examine(self, name):
         examination = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/examine", json={
@@ -274,7 +348,6 @@ class Mover:
         print(colored("Inventory: ", "green"), current_status.get("inventory"))
 
         return current_status
-
 
 def print_instructions():
     print(colored("\nYou need to enter a command.\n", "red"))
@@ -305,7 +378,6 @@ def print_instructions():
           "- this will change your name to a name of your choice")
     print("     -", colored("examine", "green"),
           "- allows you to examine the well")
-
 
 def call_functions(m, instruction, treasure=False):
     if instruction[1] == "home":
@@ -353,7 +425,7 @@ def call_functions(m, instruction, treasure=False):
             colored("Are you sure you want to go to the transmogrifier? [y or n]\n", "yellow"))
         if text == "y":
             print("Going to the transmogrifier")
-            m.go_to_shrine(treasure)
+            m.go_to_transmogriphier(treasure)
         elif text == "n":
             print("Ok")
         else:
@@ -453,8 +525,13 @@ def call_functions(m, instruction, treasure=False):
     else:
         print_instructions()
 
-
 def start(inputs):
+    # parser.add_argument("-d", "--dash", help="Set dash")
+    # parser.add_argument("-i", "--instruction", help="Give instruction")
+    # parser.add_argument("-r", "--room", help="Choose room")
+    # parser.add_argument("-t", "--treasure", help="Collect treasure")
+    # args = parser.parse_args()
+
     m = Mover()
     m.init()
 
@@ -481,6 +558,5 @@ def start(inputs):
             call_functions(m, inputs, True)
         else:
             call_functions(m, inputs, False)
-
 
 start(sys.argv)
