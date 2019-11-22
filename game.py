@@ -326,7 +326,7 @@ class Mover:
                                         'name': name }, headers={
                                 'Authorization': api_key}).json()
         print(result)
-        time.sleep(confirmation.get('cooldown'))        
+        time.sleep(result.get('cooldown'))        
 
     def examine(self):
         examination = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/examine", json={
@@ -403,7 +403,7 @@ def call_methods(m, arg):
         'mine': None,
         'sell': None,
         'balance': None,
-        'transmog': arg.item
+        'swap': arg.item
     }
 
     methods = {
@@ -420,7 +420,8 @@ def call_methods(m, arg):
         'examine': m.examine,
         'mine': m.mine,
         'sell': m.sell,
-        'balance': m.balance
+        'balance': m.balance,
+        'swap': m.transmogrify
     }
 
     x = rooms[arg.instruction]
