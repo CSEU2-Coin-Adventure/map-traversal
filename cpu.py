@@ -34,6 +34,8 @@ class CPU:
         self.reg[7] = 0xf4
         self.SP = self.reg[7]
 
+        self.code = ""
+
     def load(self):
         f = open("machine-code.txt", "r")
         address = 0
@@ -139,8 +141,11 @@ class CPU:
             self.handle_jmp(op_a, None) 
 
     def handle_pra(self, op_a, _op_b):
+        numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
         n = self.reg[op_a]
         print(chr(n))
+        if chr(n) in numbers:
+            self.code += chr(n)
 
     def push(self, op_a, _op_b):
         # decrement stack pointer
@@ -194,3 +199,5 @@ class CPU:
             
             if self.should_advance(self.ir):
                 self.pc += 1 + (self.ir >> 6)
+
+        return self.code

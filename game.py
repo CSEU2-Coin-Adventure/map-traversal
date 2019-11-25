@@ -12,6 +12,7 @@ from cpu import *
 parser = argparse.ArgumentParser()
 
 api_key = 'Token 91eab72c1255c3828263a3a60a6cefc409f6461c' # [API_KEY_HERE]
+# api_key = 'Token b2f9a7baf41f765144c1de20a9e2b0053dec8a1c'
 
 class Queue:
     def __init__(self):
@@ -114,6 +115,7 @@ class Mover:
 
         self.treasure = False
         self.dash = False
+        self.loop = False
 
     def _set_current_room(self):
         room = requests.get("https://lambda-treasure-hunt.herokuapp.com/api/adv/init/", headers={
@@ -318,8 +320,16 @@ class Mover:
         result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/bc/mine/", json={
                                         'proof': proof }, headers={
                                 'Authorization': api_key}).json()
-
         print(result)
+
+        time.sleep(result.get('cooldown'))
+
+    def mine_loop(self):
+        try:
+            self.go_to_location(55)
+        except:
+            self.examine()
+        self.examine()
 
     def transmogrify(self, name):
         result = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/transmogrify/", json={
@@ -342,8 +352,14 @@ class Mover:
 
         cpu = CPU()
         cpu.load()
-        cpu.run()
-
+        code = cpu.run()
+        self.dash = True
+        self.go_to_location(code)
+        
+        if self.loop:
+            self.mine()
+            self.mine_loop()
+        
     def status(self):
         current_status = requests.post("https://lambda-treasure-hunt.herokuapp.com/api/adv/status/", headers={
             'Authorization': api_key}).json()
@@ -403,7 +419,8 @@ def call_methods(m, arg):
         'mine': None,
         'sell': None,
         'balance': None,
-        'swap': arg.item
+        'swap': arg.item,
+        'name': arg.name
     }
 
     methods = {
@@ -421,7 +438,8 @@ def call_methods(m, arg):
         'mine': m.mine,
         'sell': m.sell,
         'balance': m.balance,
-        'swap': m.transmogrify
+        'swap': m.transmogrify,
+        'name': m.change_name
     }
 
     x = rooms[arg.instruction]
@@ -436,7 +454,9 @@ def start():
     parser.add_argument("-r", "--room", help="Choose room")
     parser.add_argument("-t", action='store_true', help="Collect treasure")
     parser.add_argument("-item", "--item", help="Select Item")
+    parser.add_argument("-n", "--name", help="Set Name")
     parser.add_argument("-help", action='store_true')
+    parser.add_argument("-l", action='store_true')
 
     args = parser.parse_args()
 
@@ -448,6 +468,11 @@ def start():
 
     m = Mover()
     m.init()
+
+    if args.l:
+        m.dash = True
+        m.loop = True
+        m.mine_loop()
 
     if args.t:
         m.treasure = True
